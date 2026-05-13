@@ -1,0 +1,34 @@
+{
+  "name": "ai-ci-auto-fixer",
+  "version": "0.1.0",
+  "description": "AI-powered GitHub Actions CI failure fixer that opens PRs after tests pass.",
+  "type": "module",
+  "bin": {
+    "ai-ci-fixer": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "fix": "tsx src/cli.ts fix-failed-ci",
+    "install-workflow": "tsx src/cli.ts install-workflow",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@octokit/rest": "^21.1.1",
+    "execa": "^9.5.2",
+    "js-yaml": "^4.1.0",
+    "minimatch": "^10.0.1",
+    "picocolors": "^1.1.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.9"
+  }
+}
