@@ -52,8 +52,7 @@ jobs:
           ref: ${{ inputs.ai_fixer_ref }}
           path: .ai-ci-auto-fixer
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
@@ -71,7 +70,7 @@ jobs:
           AI_PROVIDER: ${{ vars.AI_PROVIDER || 'command' }}
           AI_MODEL: ${{ vars.AI_MODEL || '' }}
         run: |
-          node .ai-ci-auto-fixer/node_modules/tsx/dist/cli.mjs .ai-ci-auto-fixer/src/cli.ts fix-failed-ci \
+          node .ai-ci-auto-fixer/src/cli.mjs fix-failed-ci \
             --owner "${{ inputs.owner }}" \
             --repo "${{ inputs.repo }}" \
             --run-id "${{ inputs.run_id }}" \
