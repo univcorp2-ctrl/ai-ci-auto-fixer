@@ -56,6 +56,8 @@ Codex CLI / Claude Code / 任意コマンドを使う場合:
 
 ## 単体テスト
 
+このリポジトリにはまだ `package-lock.json` をコミットしていないため、現時点では `npm install` を使います。
+
 ```bash
 npm install
 npm test
