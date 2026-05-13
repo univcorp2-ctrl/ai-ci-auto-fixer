@@ -1,74 +1,78 @@
 # AI CI Auto Fixer
 
-GitHub Actions の失敗ログを読み取り、AI で修正パッチを生成し、ローカルでテストを回し、成功したら自動で PR を作るための中央管理リポジトリです。
+GitHub Actions の失敗ログを読み取り、AI で修正パッチを生成し、テストを回し、成功したら Pull Request を作る自動修正ツールです。
 
-対応方針:
+対応 provider:
 
-- GitHub Actions の失敗ログを GitHub API から取得
-- GPT / Claude / 任意の外部コマンド（Codex CLI、Claude Code など）を provider として利用
-- 変更候補は unified diff として受け取り、`git apply` で適用
-- 許可されたファイルだけを変更
-- テストを複数回実行し、失敗したら再修正を試行
-- 成功したらブランチを push し、Pull Request を作成
-- 全リポジトリへの導入は `install-workflow` コマンドで一括配置
+- `AI_PROVIDER=openai` GPT 系モデル
+- `AI_PROVIDER=anthropic` Claude 系モデル
+- `AI_PROVIDER=command` Codex CLI / Claude Code / 任意コマンド
 
-## 1. 必要な GitHub Secrets
+## できること
 
-このリポジトリ、または導入先リポジトリに以下を設定してください。
+- 失敗した GitHub Actions run のログ取得
+- 関連ファイルの自動抽出
+- AI に unified diff を生成させる
+- `git apply` で差分適用
+- 許可されたファイルだけ変更されているか検査
+- `npm test` などのテストコマンド実行
+- 失敗したら最大回数まで再修正
+- テスト成功時だけ branch push + PR 作成
+- 全 repo に `.github/workflows/ai-ci-fixer.yml` を一括配置
 
-### 必須
+## 必要な Secret
+
+各導入先 repo または org に設定してください。
 
 - `AI_FIXER_GITHUB_TOKEN`
-  - Fine-grained PAT か GitHub App token
-  - 必要権限: Contents read/write, Pull requests read/write, Actions read, Metadata read
-
-### AI provider 別
+  - Contents read/write
+  - Pull requests read/write
+  - Actions read
+  - Metadata read
 
 OpenAI を使う場合:
 
 - `OPENAI_API_KEY`
-- `AI_PROVIDER=openai`
-- `AI_MODEL=gpt-5.1` など
+- Repository Variables: `AI_PROVIDER=openai`, `AI_MODEL=gpt-5.1` など
 
-Anthropic Claude を使う場合:
+Claude を使う場合:
 
 - `ANTHROPIC_API_KEY`
-- `AI_PROVIDER=anthropic`
-- `AI_MODEL=claude-sonnet-4-5` など
+- Repository Variables: `AI_PROVIDER=anthropic`, `AI_MODEL=claude-sonnet-4-5` など
 
-Codex CLI / Claude Code / 任意 CLI を使う場合:
+Codex CLI / Claude Code / 任意コマンドを使う場合:
 
-- `AI_PROVIDER=command`
-- `AI_FIX_COMMAND='codex exec --json'` など
+- Secret: `AI_FIX_COMMAND`
+- Repository Variables: `AI_PROVIDER=command`
 
-`command` provider は標準入力に JSON を渡し、標準出力から以下の JSON を受け取ります。
+`AI_FIX_COMMAND` は stdin で JSON を受け取り、stdout に次の JSON を返すコマンドにしてください。
 
 ```json
 {
   "summary": "what changed",
-  "patch": "diff --git ..."
+  "patch": "diff --git a/src/example.ts b/src/example.ts\n..."
 }
 ```
 
-## 2. 中央リポで単体実行
+## 単体テスト
 
 ```bash
 npm ci
 npm test
-npm run build
 ```
 
-失敗した run を指定して手動実行:
+## 手動実行
 
 ```bash
-npm run fix -- \
-  --owner YOUR_OWNER \
-  --repo YOUR_REPO \
-  --run-id 123456789 \
-  --base-ref main
+export AI_FIXER_GITHUB_TOKEN=github_pat_xxx
+export AI_PROVIDER=openai
+export OPENAI_API_KEY=sk-xxx
+npm run fix -- --owner YOUR_OWNER --repo YOUR_REPO --run-id 123456789 --base-ref main
 ```
 
-## 3. 全リポジトリに workflow を一括導入
+## 全 repo に workflow を一括導入
+
+中央 repo 名を指定します。
 
 ```bash
 export AI_FIXER_GITHUB_TOKEN=github_pat_xxx
@@ -76,54 +80,35 @@ export AI_FIXER_REPO=YOUR_OWNER/ai-ci-auto-fixer
 npm run install-workflow -- --owner YOUR_OWNER
 ```
 
-Organization の全 repo に入れる場合:
-
-```bash
-npm run install-workflow -- --owner YOUR_ORG --org
-```
-
-private repo を含める場合:
+Organization 全体:
 
 ```bash
 npm run install-workflow -- --owner YOUR_ORG --org --include-private
 ```
 
-## 4. 導入される workflow
+## repo ごとの設定
 
-各 repo に `.github/workflows/ai-ci-fixer.yml` を追加します。
-
-- `workflow_run` で CI 失敗時に起動
-- この中央リポジトリを checkout
-- `npm ci && npm run fix` を実行
-- テスト成功時だけ PR 作成
-
-## 5. 安全設計
-
-初期設定では以下のファイルは変更禁止です。
-
-- `.github/**`
-- `package-lock.json` 以外の lockfile は必要に応じて制御
-- `.env*`
-- 秘密鍵、証明書、バイナリ
-
-許可・拒否パターンは `.ai-fixer.yml` で repo ごとに変更できます。
+各 repo に `.ai-fixer.yml` を置くと制御できます。
 
 ```yaml
 maxAttempts: 3
 testCommand: npm test
 buildCommand: npm run build
+dryRun: false
 allowedPaths:
   - src/**
   - test/**
+  - tests/**
   - package.json
   - package-lock.json
 blockedPaths:
   - .github/**
   - .env*
+  - '**/*.pem'
 ```
 
-## 6. 運用のおすすめ
+## 安全設計
 
-最初は `dryRun: true` で始め、対象 repo を数個に絞ってください。安定したら org 全体に広げます。
+このツールは main に直接 push しません。必ず修正 branch を作り、テストが通ったときだけ PR を作ります。
 
-この仕組みは「自動で main に push」ではなく、必ず PR を作ります。人間のレビューを残す設計です。
+初期設定では `.github/**`, `.env*`, 秘密鍵、画像、圧縮ファイルなどは AI に変更させません。
