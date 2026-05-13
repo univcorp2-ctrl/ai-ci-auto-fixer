@@ -58,7 +58,7 @@ jobs:
 
       - name: Install AI fixer dependencies
         working-directory: .ai-ci-auto-fixer
-        run: npm ci
+        run: npm install
 
       - name: Run AI fixer
         env:
