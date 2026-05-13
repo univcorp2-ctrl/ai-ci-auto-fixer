@@ -1,0 +1,78 @@
+name: Reusable AI CI Fixer
+
+on:
+  workflow_call:
+    inputs:
+      owner:
+        required: true
+        type: string
+      repo:
+        required: true
+        type: string
+      run_id:
+        required: true
+        type: string
+      base_ref:
+        required: false
+        type: string
+        default: main
+      ai_fixer_ref:
+        required: false
+        type: string
+        default: main
+    secrets:
+      AI_FIXER_GITHUB_TOKEN:
+        required: true
+      OPENAI_API_KEY:
+        required: false
+      ANTHROPIC_API_KEY:
+        required: false
+      AI_FIX_COMMAND:
+        required: false
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+    steps:
+      - name: Checkout target repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.owner }}/${{ inputs.repo }}
+          token: ${{ secrets.AI_FIXER_GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Checkout AI fixer
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ inputs.ai_fixer_ref }}
+          path: .ai-ci-auto-fixer
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install AI fixer dependencies
+        working-directory: .ai-ci-auto-fixer
+        run: npm ci
+
+      - name: Run AI fixer
+        env:
+          AI_FIXER_GITHUB_TOKEN: ${{ secrets.AI_FIXER_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.AI_FIXER_GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AI_FIX_COMMAND: ${{ secrets.AI_FIX_COMMAND }}
+          AI_PROVIDER: ${{ vars.AI_PROVIDER || 'command' }}
+          AI_MODEL: ${{ vars.AI_MODEL || '' }}
+        run: |
+          node .ai-ci-auto-fixer/node_modules/tsx/dist/cli.mjs .ai-ci-auto-fixer/src/cli.ts fix-failed-ci \
+            --owner "${{ inputs.owner }}" \
+            --repo "${{ inputs.repo }}" \
+            --run-id "${{ inputs.run_id }}" \
+            --base-ref "${{ inputs.base_ref }}"
