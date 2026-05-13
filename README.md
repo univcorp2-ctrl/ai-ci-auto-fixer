@@ -57,7 +57,7 @@ Codex CLI / Claude Code / 任意コマンドを使う場合:
 ## 単体テスト
 
 ```bash
-npm ci
+npm install
 npm test
 ```
 
