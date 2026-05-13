@@ -31,8 +31,4 @@ jobs:
       run_id: ${{ github.event_name == 'workflow_dispatch' && inputs.run_id || github.event.workflow_run.id }}
       base_ref: ${{ github.event_name == 'workflow_dispatch' && inputs.base_ref || github.event.workflow_run.head_branch || 'main' }}
       ai_fixer_ref: __AI_FIXER_REF__
-    secrets:
-      AI_FIXER_GITHUB_TOKEN: ${{ secrets.AI_FIXER_GITHUB_TOKEN }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      AI_FIX_COMMAND: ${{ secrets.AI_FIX_COMMAND }}
+    secrets: inherit
