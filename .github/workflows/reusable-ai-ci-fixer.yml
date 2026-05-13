@@ -22,7 +22,7 @@ on:
         default: main
     secrets:
       AI_FIXER_GITHUB_TOKEN:
-        required: true
+        required: false
       OPENAI_API_KEY:
         required: false
       ANTHROPIC_API_KEY:
@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.owner }}/${{ inputs.repo }}
-          token: ${{ secrets.AI_FIXER_GITHUB_TOKEN }}
+          token: ${{ secrets.AI_FIXER_GITHUB_TOKEN || github.token }}
           fetch-depth: 0
 
       - name: Checkout AI fixer
@@ -62,13 +62,13 @@ jobs:
 
       - name: Run AI fixer
         env:
-          AI_FIXER_GITHUB_TOKEN: ${{ secrets.AI_FIXER_GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.AI_FIXER_GITHUB_TOKEN }}
+          AI_FIXER_GITHUB_TOKEN: ${{ secrets.AI_FIXER_GITHUB_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.AI_FIXER_GITHUB_TOKEN || github.token }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           AI_FIX_COMMAND: ${{ secrets.AI_FIX_COMMAND }}
-          AI_PROVIDER: ${{ vars.AI_PROVIDER || 'command' }}
-          AI_MODEL: ${{ vars.AI_MODEL || '' }}
+          AI_PROVIDER: ${{ vars.AI_PROVIDER || 'openai' }}
+          AI_MODEL: ${{ vars.AI_MODEL || 'gpt-5.1' }}
         run: |
           node .ai-ci-auto-fixer/src/cli.mjs fix-failed-ci \
             --owner "${{ inputs.owner }}" \
